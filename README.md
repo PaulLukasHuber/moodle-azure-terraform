@@ -166,10 +166,3 @@ This deployment implements security best practices:
 ## License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
-## Acknowledgments
-
-- Moodle open-source project
-- HashiCorp Terraform
-- Microsoft Azure
-- Contributors to this project
