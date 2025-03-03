@@ -4,27 +4,12 @@ This project contains Terraform configuration to deploy a complete Moodle Learni
 
 ## Architecture
 
-<<<<<<< HEAD
 This deployment creates the following resources:
 - Azure App Service for hosting the Moodle application
 - Azure Database for MySQL for Moodle data
 - Azure Storage Account for Moodle files
 - Virtual Network with subnets for web and database
 - Network Security Groups for secure communication
-=======
-![Moodle Azure Architecture](docs/images/architecture-diagram.png)
-COMING SOON
-
-The solution implements a scalable, highly available architecture:
-
-- Web tier: Azure Virtual Machine Scale Sets running Apache and PHP
-- Database tier: Azure Database for MySQL/MariaDB
-- File storage: Azure Storage Account with File Shares
-- Cache layer: Azure Redis Cache for session management
-- CDN: Azure CDN for static content delivery
-- Security: Network Security Groups, Azure Key Vault for secrets
-- Monitoring: Azure Monitor and Application Insights
->>>>>>> origin/main
 
 ## Prerequisites
 
@@ -103,8 +88,4 @@ This deployment includes:
 
 ## License
 
-<<<<<<< HEAD
 This project is licensed under the MIT License - see the LICENSE file for details.
-=======
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
->>>>>>> origin/main
