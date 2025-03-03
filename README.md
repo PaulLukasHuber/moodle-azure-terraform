@@ -15,6 +15,7 @@ This project provides Infrastructure as Code (IaC) implementation using Terrafor
 ## Architecture
 
 ![Moodle Azure Architecture](docs/images/architecture-diagram.png)
+COMING SOON
 
 The solution implements a scalable, highly available architecture:
 
