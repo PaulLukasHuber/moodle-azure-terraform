@@ -55,6 +55,15 @@ Thumbs.db
 *.pfx
 *.p12
 
+# Logs
+*.log
+**/*.log
+logs/
+log/
+**/*.logs
+.logs/
+.log/
+
 # Backend configuration
 backend.conf
 
