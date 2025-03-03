@@ -37,27 +37,28 @@ function log_error() {
 }
 
 # Execute command and log output
-function execute_and_log() {
+function execute_command() {
   local cmd="$1"
   local msg="$2"
+  local timestamp=$(date +"%Y-%m-%d %H:%M:%S")
   
   log_message "$msg"
   echo "[$timestamp] COMMAND: $cmd" >> "$LOG_FILE"
   
-  # Execute the command, capture output and exit code
-  output=$(eval "$cmd" 2>&1)
-  exit_code=$?
-  
-  # Log the output
-  echo "$output" | while read -r line; do
+  # Execute the command and capture output while showing it on screen
+  eval "$cmd" 2>&1 | while read -r line; do
+    echo "$line"
     echo "[$timestamp] OUTPUT: $line" >> "$LOG_FILE"
   done
   
-  # Also print to console if verbose
-  echo "$output"
+  # Handle potential pipe failure (bash pipefail behavior)
+  if [ ${PIPESTATUS[0]} -ne 0 ]; then
+    log_error "Command failed: $cmd"
+    echo "[$timestamp] ERROR: Command failed with non-zero exit code" >> "$LOG_FILE"
+    return 1
+  fi
   
-  # Return the original exit code
-  return $exit_code
+  return 0
 }
 
 # Check prerequisites
@@ -83,15 +84,18 @@ if ! command -v az &> /dev/null; then
   exit 1
 fi
 
-# Log Azure CLI version
-az_version=$(az version | jq -r ".[\"azure-cli\"]")
-echo "[$(date +"%Y-%m-%d %H:%M:%S")] AZURE CLI: $az_version" >> "$LOG_FILE"
+# Log Azure CLI version - without using jq
+az_version_output=$(az version 2>&1)
+echo "[$(date +"%Y-%m-%d %H:%M:%S")] AZURE CLI VERSION INFO: $az_version_output" >> "$LOG_FILE"
 
 # Check if user is logged in to Azure
 az account show &> /dev/null
 if [ $? -ne 0 ]; then
   log_message "Logging in to Azure"
-  az login 2>&1 | tee -a "$LOG_FILE"
+  az login | while read -r line; do
+    echo "$line"
+    echo "[$(date +"%Y-%m-%d %H:%M:%S")] LOGIN: $line" >> "$LOG_FILE"
+  done
 else
   log_message "Already logged in to Azure"
   account_info=$(az account show --query name -o tsv)
@@ -101,7 +105,7 @@ fi
 
 # Initialize Terraform
 log_message "Initializing Terraform"
-execute_and_log "terraform init" "Running terraform init"
+execute_command "terraform init" "Running terraform init"
 
 # Check if terraform.tfvars exists, create it if not
 if [ ! -f terraform.tfvars ]; then
@@ -123,7 +127,7 @@ fi
 
 # Generate a plan
 log_message "Generating Terraform plan"
-execute_and_log "terraform plan -out=moodle_plan" "Creating deployment plan"
+execute_command "terraform plan -out=moodle_plan" "Creating deployment plan"
 
 # Confirm with user before applying
 echo ""
@@ -140,7 +144,7 @@ fi
 
 # Apply the plan
 log_message "Applying Terraform plan"
-execute_and_log "terraform apply \"moodle_plan\"" "Deploying resources to Azure"
+execute_command "terraform apply \"moodle_plan\"" "Deploying resources to Azure"
 
 # Display outputs
 log_message "Deployment completed"
