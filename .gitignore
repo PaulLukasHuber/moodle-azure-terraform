@@ -1,0 +1,63 @@
+# Local .terraform directories
+**/.terraform/*
+
+# .tfstate files
+*.tfstate
+*.tfstate.*
+*.tfplan
+
+# Crash log files
+crash.log
+crash.*.log
+
+# Exclude all .tfvars files, which are likely to contain sensitive data
+*.tfvars
+*.tfvars.json
+
+# Except example files
+!terraform.tfvars.example
+
+# Override files
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+
+# Include tfplan files to ignore the plan output of command: terraform plan -out=tfplan
+*tfplan*
+
+# Include CLI configuration files
+.terraformrc
+terraform.rc
+
+# Ignore sensitive script output
+deploy-output.log
+
+# Ignore auto-generated documentation
+docs/generated/
+
+# IDE & Editor folders
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS specific files
+.DS_Store
+Thumbs.db
+
+# Certificate and secret files
+*.pem
+*.key
+*.crt
+*.pfx
+*.p12
+
+# Backend configuration
+backend.conf
+
+# Sensitive output files
+output.json
+secrets.txt
+credentials.json
