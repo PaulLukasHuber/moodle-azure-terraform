@@ -1,132 +1,128 @@
-variable "project_name" {
-  description = "Project name used for tagging and naming resources"
+# General variables
+variable "resource_group_name" {
+  description = "Name of the resource group"
   type        = string
-  default     = "moodle"
+  default     = "moodle-resources"
 }
 
 variable "location" {
-  description = "Azure region for all resources"
+  description = "Azure region to deploy resources"
   type        = string
   default     = "westeurope"
 }
 
-variable "environment" {
-  description = "Environment (dev, test, prod)"
-  type        = string
-  default     = "dev"
+variable "tags" {
+  description = "Tags to apply to all resources"
+  type        = map(string)
+  default = {
+    environment = "development"
+    project     = "moodle-lms"
+  }
 }
 
-variable "resource_group_name" {
-  description = "Name of the resource group"
+# Networking variables
+variable "vnet_name" {
+  description = "Name of the virtual network"
   type        = string
-  default     = "moodle-rg"
+  default     = "moodle-vnet"
 }
 
-# Network variables
-variable "vnet_address_space" {
-  description = "Address space for Virtual Network"
+variable "address_space" {
+  description = "Address space for the virtual network"
   type        = list(string)
   default     = ["10.0.0.0/16"]
 }
 
-variable "web_subnet_address_prefix" {
-  description = "Address prefix for web subnet"
-  type        = string
-  default     = "10.0.1.0/24"
+variable "subnet_prefixes" {
+  description = "Address prefixes for subnets"
+  type        = list(string)
+  default     = ["10.0.1.0/24", "10.0.2.0/24", "10.0.3.0/24"]
 }
 
-variable "db_subnet_address_prefix" {
-  description = "Address prefix for database subnet"
+variable "subnet_names" {
+  description = "Names for subnets"
+  type        = list(string)
+  default     = ["web-subnet", "db-subnet", "pe-subnet"]
+}
+
+# Storage variables
+variable "storage_account_name" {
+  description = "Name of the storage account for Moodle files"
   type        = string
-  default     = "10.0.2.0/24"
+  default     = "moodlestorage"
 }
 
 # Database variables
-variable "mysql_server_name" {
-  description = "Name of the MySQL server"
+variable "db_server_name" {
+  description = "Name for the PostgreSQL server"
   type        = string
-  default     = "moodle-mysql"
+  default     = "moodle-postgres"
 }
 
-variable "mysql_admin_username" {
-  description = "MySQL administrator username"
+variable "db_name" {
+  description = "Name for the Moodle database"
+  type        = string
+  default     = "moodledb"
+}
+
+variable "db_admin_username" {
+  description = "Username for the database administrator"
   type        = string
   default     = "moodleadmin"
-  sensitive   = true
 }
 
-variable "mysql_admin_password" {
-  description = "MySQL administrator password"
+variable "db_admin_password" {
+  description = "Password for the database administrator"
   type        = string
   sensitive   = true
 }
 
-# Note: These variables are kept for compatibility but actual values are hardcoded in the module
-variable "mysql_version" {
-  description = "MySQL version"
+# Compute variables
+variable "vm_name" {
+  description = "Name for the Moodle VM"
   type        = string
-  default     = "8.0.21"
+  default     = "moodle-vm"
 }
 
-variable "mysql_sku_name" {
-  description = "MySQL SKU Name"
+variable "vm_size" {
+  description = "Size of the VM"
   type        = string
-  default     = "B_Standard_B1s" # Basic tier, most economical option
+  default     = "Standard_B1ms"  # Budget-friendly size
 }
 
-variable "mysql_storage_mb" {
-  description = "MySQL Storage in MB"
-  type        = number
-  default     = 20480 # 20GB, minimum required
-}
-
-# Web App variables
-variable "app_service_plan_tier" {
-  description = "Tier for App Service Plan"
+variable "vm_admin_username" {
+  description = "Username for the VM administrator"
   type        = string
-  default     = "Basic" # Basic tier for cost optimization
+  default     = "azureadmin"
 }
 
-variable "app_service_plan_size" {
-  description = "Size/SKU for App Service Plan (e.g. B1, S1, P1v2)"
+variable "vm_admin_password" {
+  description = "Password for the VM administrator"
   type        = string
-  default     = "B1" # Basic small instance
+  sensitive   = true
 }
 
-# Moodle config variables
-variable "moodle_site_name" {
-  description = "Moodle site name"
-  type        = string
-  default     = "Moodle LMS"
-}
-
+# Moodle variables
 variable "moodle_admin_email" {
-  description = "Moodle admin email"
+  description = "Email for the Moodle administrator"
   type        = string
   default     = "admin@example.com"
 }
 
 variable "moodle_admin_user" {
-  description = "Moodle admin username"
+  description = "Username for the Moodle administrator"
   type        = string
   default     = "admin"
 }
 
 variable "moodle_admin_password" {
-  description = "Moodle admin password"
+  description = "Password for the Moodle administrator"
   type        = string
   sensitive   = true
 }
 
-# Storage variables
-variable "storage_account_tier" {
-  description = "Tier for Storage Account"
+variable "moodle_site_name" {
+  description = "Site name for the Moodle installation"
   type        = string
-  default     = "Standard"
-}
-
-variable "storage_account_replication_type" {
-  description = "Replication type for Storage Account"
-  type        = string
-  default     = "LRS" # Locally redundant storage (lowest cost option)
+  default     = "Moodle LMS"
 }

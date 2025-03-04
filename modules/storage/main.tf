@@ -1,50 +1,35 @@
+# Create a storage account for Moodle files
 resource "azurerm_storage_account" "moodle_storage" {
-  name                     = lower(replace("${var.project_name}${var.environment}sa", "-", ""))
+  name                     = var.storage_account_name
   resource_group_name      = var.resource_group_name
   location                 = var.location
-  account_tier             = var.storage_account_tier
-  account_replication_type = var.storage_account_replication_type
-  
-  # Security settings
+  account_tier             = "Standard"
+  account_replication_type = "LRS"  # Locally redundant storage is more cost-effective
   min_tls_version          = "TLS1_2"
-
-
-  # Allow blob public access for Moodle content files
-  allow_nested_items_to_be_public = true
+  tags                     = var.tags
   
+  # Enable blob and file services
   blob_properties {
     cors_rule {
       allowed_headers    = ["*"]
       allowed_methods    = ["GET", "HEAD", "POST", "PUT"]
-      allowed_origins    = ["*"] # In production, restrict to your domain
+      allowed_origins    = ["*"]  # In production, restrict to your domain
       exposed_headers    = ["*"]
       max_age_in_seconds = 3600
     }
   }
-
-  tags = {
-    environment = var.environment
-    project     = var.project_name
-  }
 }
 
-# Container for Moodle data files
+# Create a container for Moodle data
 resource "azurerm_storage_container" "moodle_data" {
   name                  = "moodledata"
   storage_account_name  = azurerm_storage_account.moodle_storage.name
   container_access_type = "private"
 }
 
-# Container for Moodle backups
-resource "azurerm_storage_container" "moodle_backups" {
-  name                  = "moodlebackups"
-  storage_account_name  = azurerm_storage_account.moodle_storage.name
-  container_access_type = "private"
-}
-
-# Container for public content (like course images)
-resource "azurerm_storage_container" "moodle_public" {
-  name                  = "moodlepublic"
-  storage_account_name  = azurerm_storage_account.moodle_storage.name
-  container_access_type = "blob" # Public read access for blobs
+# Create a file share for Moodle files
+resource "azurerm_storage_share" "moodle_share" {
+  name                 = "moodlefiles"
+  storage_account_name = azurerm_storage_account.moodle_storage.name
+  quota                = 5  # 5 GB, adjust as needed within budget
 }

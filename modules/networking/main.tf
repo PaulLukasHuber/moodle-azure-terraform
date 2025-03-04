@@ -1,50 +1,34 @@
+# Create a virtual network
 resource "azurerm_virtual_network" "moodle_vnet" {
-  name                = "${var.project_name}-vnet"
-  address_space       = var.vnet_address_space
+  name                = var.vnet_name
+  address_space       = var.address_space
   location            = var.location
   resource_group_name = var.resource_group_name
-
-  tags = {
-    environment = var.environment
-    project     = var.project_name
-  }
+  tags                = var.tags
 }
 
-resource "azurerm_subnet" "web_subnet" {
-  name                 = "${var.project_name}-web-subnet"
+# Create subnets
+resource "azurerm_subnet" "subnets" {
+  count                = length(var.subnet_names)
+  name                 = var.subnet_names[count.index]
   resource_group_name  = var.resource_group_name
   virtual_network_name = azurerm_virtual_network.moodle_vnet.name
-  address_prefixes     = [var.web_subnet_address_prefix]
-
-  # This subnet delegation is required for App Service integration
-  delegation {
-    name = "app-service-delegation"
-    service_delegation {
-      name    = "Microsoft.Web/serverFarms"
-      actions = ["Microsoft.Network/virtualNetworks/subnets/action"]
-    }
-  }
-}
-
-resource "azurerm_subnet" "db_subnet" {
-  name                 = "${var.project_name}-db-subnet"
-  resource_group_name  = var.resource_group_name
-  virtual_network_name = azurerm_virtual_network.moodle_vnet.name
-  address_prefixes     = [var.db_subnet_address_prefix]
+  address_prefixes     = [var.subnet_prefixes[count.index]]
   
-  # This service endpoint allows the database to accept connections from this subnet only
-  service_endpoints    = ["Microsoft.Sql"]
+  # For the database subnet, enable service endpoint for PostgreSQL
+  service_endpoints    = count.index == 1 ? ["Microsoft.Sql"] : []
 }
 
-# Network Security Group for web subnet
+# Create network security group for web subnet
 resource "azurerm_network_security_group" "web_nsg" {
-  name                = "${var.project_name}-web-nsg"
+  name                = "web-nsg"
   location            = var.location
   resource_group_name = var.resource_group_name
+  tags                = var.tags
 
-  # Allow HTTP traffic
+  # Allow HTTP
   security_rule {
-    name                       = "AllowHTTP"
+    name                       = "allow-http"
     priority                   = 100
     direction                  = "Inbound"
     access                     = "Allow"
@@ -55,9 +39,9 @@ resource "azurerm_network_security_group" "web_nsg" {
     destination_address_prefix = "*"
   }
 
-  # Allow HTTPS traffic
+  # Allow HTTPS
   security_rule {
-    name                       = "AllowHTTPS"
+    name                       = "allow-https"
     priority                   = 110
     direction                  = "Inbound"
     access                     = "Allow"
@@ -68,35 +52,50 @@ resource "azurerm_network_security_group" "web_nsg" {
     destination_address_prefix = "*"
   }
 
-  tags = {
-    environment = var.environment
-    project     = var.project_name
+  # Allow SSH
+  security_rule {
+    name                       = "allow-ssh"
+    priority                   = 120
+    direction                  = "Inbound"
+    access                     = "Allow"
+    protocol                   = "Tcp"
+    source_port_range          = "*"
+    destination_port_range     = "22"
+    source_address_prefix      = "*"
+    destination_address_prefix = "*"
   }
 }
 
-# Network Security Group for database subnet
+# Associate NSG with web subnet
+resource "azurerm_subnet_network_security_group_association" "web_nsg_association" {
+  subnet_id                 = azurerm_subnet.subnets[0].id
+  network_security_group_id = azurerm_network_security_group.web_nsg.id
+}
+
+# Create network security group for database subnet
 resource "azurerm_network_security_group" "db_nsg" {
-  name                = "${var.project_name}-db-nsg"
+  name                = "db-nsg"
   location            = var.location
   resource_group_name = var.resource_group_name
+  tags                = var.tags
 
-  # Allow MySQL traffic from web subnet only
+  # Allow PostgreSQL from web subnet only
   security_rule {
-    name                       = "AllowMySQLFromWebSubnet"
+    name                       = "allow-postgres-from-web"
     priority                   = 100
     direction                  = "Inbound"
     access                     = "Allow"
     protocol                   = "Tcp"
     source_port_range          = "*"
-    destination_port_range     = "3306"
-    source_address_prefix      = var.web_subnet_address_prefix
+    destination_port_range     = "5432"
+    source_address_prefix      = var.subnet_prefixes[0]
     destination_address_prefix = "*"
   }
 
   # Deny all other inbound traffic
   security_rule {
-    name                       = "DenyAllInbound"
-    priority                   = 1000
+    name                       = "deny-all-inbound"
+    priority                   = 4096
     direction                  = "Inbound"
     access                     = "Deny"
     protocol                   = "*"
@@ -105,21 +104,10 @@ resource "azurerm_network_security_group" "db_nsg" {
     source_address_prefix      = "*"
     destination_address_prefix = "*"
   }
-
-  tags = {
-    environment = var.environment
-    project     = var.project_name
-  }
-}
-
-# Associate NSG with web subnet
-resource "azurerm_subnet_network_security_group_association" "web_nsg_association" {
-  subnet_id                 = azurerm_subnet.web_subnet.id
-  network_security_group_id = azurerm_network_security_group.web_nsg.id
 }
 
 # Associate NSG with database subnet
 resource "azurerm_subnet_network_security_group_association" "db_nsg_association" {
-  subnet_id                 = azurerm_subnet.db_subnet.id
+  subnet_id                 = azurerm_subnet.subnets[1].id
   network_security_group_id = azurerm_network_security_group.db_nsg.id
 }

@@ -1,42 +1,41 @@
-output "resource_group_name" {
-  description = "Name of the resource group"
-  value       = azurerm_resource_group.moodle_rg.name
+# Output the public IP address to access the Moodle instance
+output "moodle_url" {
+  description = "URL to access the Moodle site"
+  value       = "http://${module.compute.public_ip_address}"
 }
 
-output "vnet_id" {
-  description = "ID of the Virtual Network"
-  value       = module.networking.vnet_id
+# Output the FQDN for the Moodle VM
+output "moodle_fqdn" {
+  description = "FQDN for the Moodle VM"
+  value       = module.compute.public_ip_fqdn
 }
 
-output "mysql_server_fqdn" {
-  description = "FQDN of the MySQL server"
-  value       = module.database.mysql_server_fqdn
+# Output the PostgreSQL server FQDN
+output "postgresql_fqdn" {
+  description = "FQDN of the PostgreSQL server"
+  value       = module.database.db_server_fqdn
 }
 
+# Output the storage account name
 output "storage_account_name" {
-  description = "Name of the Storage Account"
+  description = "Name of the storage account used for Moodle files"
   value       = module.storage.storage_account_name
 }
 
-output "moodle_url" {
-  description = "URL of the Moodle application"
-  value       = "https://${module.webapp.web_app_default_hostname}"
+# Output the resource group name
+output "resource_group_name" {
+  description = "Name of the resource group containing all resources"
+  value       = azurerm_resource_group.moodle_rg.name
 }
 
-output "moodle_outbound_ips" {
-  description = "Outbound IP addresses of the Moodle Web App"
-  value       = module.webapp.web_app_outbound_ip_addresses
+# Output connection instructions
+output "connection_instructions" {
+  description = "Instructions to connect to the Moodle VM"
+  value       = "Connect via SSH: ssh ${var.vm_admin_username}@${module.compute.public_ip_address}"
 }
 
-# Add sensitive information that might be needed for manual configurations
-output "sensitive_info" {
-  description = "Sensitive information (Database credentials, Storage keys)"
-  value = {
-    mysql_admin_username = var.mysql_admin_username
-    mysql_admin_password = var.mysql_admin_password
-    moodle_admin_user    = var.moodle_admin_user
-    moodle_admin_password = var.moodle_admin_password
-    storage_account_key  = module.storage.storage_account_primary_access_key
-  }
-  sensitive = true
+# Output Moodle admin login URL
+output "moodle_admin_url" {
+  description = "URL to access the Moodle admin panel"
+  value       = "http://${module.compute.public_ip_address}/admin"
 }

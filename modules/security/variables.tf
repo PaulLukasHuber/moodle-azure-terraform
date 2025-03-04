@@ -8,9 +8,14 @@ variable "location" {
   type        = string
 }
 
-variable "storage_account_name" {
-  description = "Name of the storage account for Moodle files"
+variable "vm_id" {
+  description = "ID of the virtual machine to secure"
   type        = string
+}
+
+variable "subnet_ids" {
+  description = "IDs of the subnets used in the deployment"
+  type        = list(string)
 }
 
 variable "tags" {

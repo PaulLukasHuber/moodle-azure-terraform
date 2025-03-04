@@ -1,77 +1,113 @@
-# Create the resource group for all Moodle resources
+# Configure the Azure provider
+terraform {
+  required_providers {
+    azurerm = {
+      source  = "hashicorp/azurerm"
+      version = "~> 3.0"
+    }
+  }
+  required_version = ">= 1.0"
+}
+
+provider "azurerm" {
+  features {}
+}
+
+# Create a resource group
 resource "azurerm_resource_group" "moodle_rg" {
   name     = var.resource_group_name
   location = var.location
-
-  tags = {
-    environment = var.environment
-    project     = var.project_name
-  }
+  tags     = var.tags
 }
 
-# Create networking resources
+# Deploy networking resources
 module "networking" {
-  source = "./modules/networking"
-
-  project_name            = var.project_name
-  location                = var.location
-  environment             = var.environment
-  resource_group_name     = azurerm_resource_group.moodle_rg.name
-  vnet_address_space      = var.vnet_address_space
-  web_subnet_address_prefix = var.web_subnet_address_prefix
-  db_subnet_address_prefix  = var.db_subnet_address_prefix
+  source              = "./modules/networking"
+  resource_group_name = azurerm_resource_group.moodle_rg.name
+  location            = azurerm_resource_group.moodle_rg.location
+  vnet_name           = var.vnet_name
+  address_space       = var.address_space
+  subnet_prefixes     = var.subnet_prefixes
+  subnet_names        = var.subnet_names
+  tags                = var.tags
 }
 
-# Create storage resources
+# Deploy storage resources
 module "storage" {
-  source = "./modules/storage"
-
-  project_name                    = var.project_name
-  location                        = var.location
-  environment                     = var.environment
-  resource_group_name             = azurerm_resource_group.moodle_rg.name
-  storage_account_tier            = var.storage_account_tier
-  storage_account_replication_type = var.storage_account_replication_type
+  source              = "./modules/storage"
+  resource_group_name = azurerm_resource_group.moodle_rg.name
+  location            = azurerm_resource_group.moodle_rg.location
+  storage_account_name = var.storage_account_name
+  tags                = var.tags
 }
 
-# Create database resources
+# Deploy compute resources first, so we can get the VM's public IP for the database firewall rule
+module "compute" {
+  source              = "./modules/compute"
+  resource_group_name = azurerm_resource_group.moodle_rg.name
+  location            = azurerm_resource_group.moodle_rg.location
+  vm_name             = var.vm_name
+  vm_size             = var.vm_size
+  admin_username      = var.vm_admin_username
+  admin_password      = var.vm_admin_password
+  subnet_id           = module.networking.subnet_ids[0]  # Web tier subnet
+  storage_account_name = module.storage.storage_account_name
+  storage_account_key  = module.storage.storage_account_key
+  db_server_fqdn      = var.db_server_name  # We'll update this later via a null_resource
+  db_name             = var.db_name
+  db_admin_username   = var.db_admin_username
+  db_admin_password   = var.db_admin_password
+  moodle_admin_email  = var.moodle_admin_email
+  moodle_admin_user   = var.moodle_admin_user
+  moodle_admin_password = var.moodle_admin_password
+  moodle_site_name    = var.moodle_site_name
+  tags                = var.tags
+}
+
+# Now deploy database resources, allowing access from the VM's public IP
 module "database" {
-  source = "./modules/database"
-
-  project_name          = var.project_name
-  location              = var.location
-  environment           = var.environment
-  resource_group_name   = azurerm_resource_group.moodle_rg.name
-  mysql_server_name     = var.mysql_server_name
-  mysql_admin_username  = var.mysql_admin_username
-  mysql_admin_password  = var.mysql_admin_password
-  mysql_version         = var.mysql_version
-  mysql_sku_name        = var.mysql_sku_name
-  mysql_storage_mb      = var.mysql_storage_mb
-  web_subnet_id         = module.networking.web_subnet_id
-  virtual_network_id    = module.networking.vnet_id
+  source                  = "./modules/database"
+  resource_group_name     = azurerm_resource_group.moodle_rg.name
+  location                = azurerm_resource_group.moodle_rg.location
+  db_server_name          = var.db_server_name
+  db_name                 = var.db_name
+  db_admin_username       = var.db_admin_username
+  db_admin_password       = var.db_admin_password
+  subnet_id               = module.networking.subnet_ids[1]  # Database subnet
+  private_endpoint_subnet_id = module.networking.subnet_ids[2]  # Private endpoint subnet
+  vm_name                 = var.vm_name
+  vm_depends_on           = [module.compute.vm_id]  # Create dependency on the VM
+  tags                    = var.tags
 }
 
-# Create webapp resources
-module "webapp" {
-  source = "./modules/webapp"
+# Deploy security resources
+module "security" {
+  source              = "./modules/security"
+  resource_group_name = azurerm_resource_group.moodle_rg.name
+  location            = azurerm_resource_group.moodle_rg.location
+  vm_id               = module.compute.vm_id
+  subnet_ids          = module.networking.subnet_ids
+  tags                = var.tags
+}
 
-  project_name            = var.project_name
-  location                = var.location
-  environment             = var.environment
-  resource_group_name     = azurerm_resource_group.moodle_rg.name
-  app_service_plan_tier   = var.app_service_plan_tier
-  app_service_plan_size   = var.app_service_plan_size
-  mysql_server_fqdn       = module.database.mysql_server_fqdn
-  mysql_database_name     = module.database.mysql_database_name
-  mysql_admin_username    = var.mysql_admin_username
-  mysql_admin_password    = var.mysql_admin_password
-  moodle_site_name        = var.moodle_site_name
-  moodle_admin_email      = var.moodle_admin_email
-  moodle_admin_user       = var.moodle_admin_user
-  moodle_admin_password   = var.moodle_admin_password
-  storage_account_name    = module.storage.storage_account_name
-  storage_account_key     = module.storage.storage_account_primary_access_key
-  moodle_data_container_name = module.storage.moodle_data_container_name
-  web_subnet_id           = module.networking.web_subnet_id
+# Update the Moodle configuration to use the actual database FQDN after it's created
+resource "null_resource" "update_moodle_config" {
+  # This will run a script on the VM to update the Moodle config with the actual database FQDN
+  depends_on = [module.compute, module.database]
+
+  # This triggers the resource to run when the database FQDN changes
+  triggers = {
+    db_server_fqdn = module.database.db_server_fqdn
+  }
+
+  # Use Azure CLI to run a command on the VM
+  provisioner "local-exec" {
+    command = <<-EOT
+      az vm run-command invoke \
+        --resource-group ${azurerm_resource_group.moodle_rg.name} \
+        --name ${var.vm_name} \
+        --command-id RunShellScript \
+        --scripts 'sed -i "s|dbhost.*|dbhost    = \"${module.database.db_server_fqdn}\";|g" /var/www/html/moodle/config.php'
+    EOT
+  }
 }
