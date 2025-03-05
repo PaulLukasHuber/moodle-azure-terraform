@@ -1,0 +1,36 @@
+# General configuration
+resource_group_name = "moodle-resources"
+location            = "westeurope" # Select a region near you
+tags = {
+  environment = "production"
+  project     = "moodle-lms"
+  department  = "education"
+  owner       = "student-group"
+}
+
+# Networking configuration
+vnet_name       = "moodle-vnet"
+address_space   = ["10.0.0.0/16"]
+subnet_prefixes = ["10.0.1.0/24", "10.0.2.0/24", "10.0.3.0/24"]
+subnet_names    = ["web-subnet", "db-subnet", "pe-subnet"]
+
+# Storage configuration
+storage_account_name = "moodlestorage25"  # Must be globally unique
+
+# Database configuration
+db_server_name     = "moodle-postgres-25"  # Must be globally unique
+db_name            = "moodledb"
+db_admin_username  = "moodleadmin"
+db_admin_password  = "YourStrongPasswordHere12345!"  # Replace with a secure password
+
+# Virtual Machine configuration
+vm_name           = "moodle-vm"
+vm_size           = "Standard_B2s"  # Consider budget constraints
+vm_admin_username = "azureadmin"
+vm_admin_password = "YourStrongPasswordHere12345!"  # Replace with a secure password
+
+# Moodle configuration
+moodle_admin_email    = "admin@yourschool.edu"
+moodle_admin_user     = "moodleadmin"
+moodle_admin_password = "YourStrongPasswordHere12345!"  # Replace with a secure password
+moodle_site_name      = "Moodle LMS"
