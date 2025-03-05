@@ -31,85 +31,65 @@ locals {
   moodle_setup_script = <<-EOT
 #!/bin/bash
 
+# Set to exit script if any command fails
+set -e
+
 # Update system packages
 apt update
 apt upgrade -y
 
-# Install required packages
-apt install -y apache2 php php-curl php-gd php-mbstring php-xml php-xmlrpc php-soap php-intl php-zip php-pgsql
+# Add PPA repository for PHP 8.1
+apt install -y software-properties-common
+add-apt-repository ppa:ondrej/php -y
+apt update
 
-# Install additional PHP extensions needed for Moodle
-apt install -y graphviz aspell ghostscript clamav php-cli php-pspell php-ldap
+# Install Apache
+apt install -y apache2
+
+# Install PHP 8.1 and required extensions
+apt install -y php8.1 libapache2-mod-php8.1
+apt install -y php8.1-common php8.1-curl php8.1-gd php8.1-intl php8.1-mbstring
+apt install -y php8.1-xml php8.1-xmlrpc php8.1-soap php8.1-zip php8.1-pgsql 
+apt install -y php8.1-opcache
+
+# Install additional utilities needed for Moodle
+apt install -y graphviz aspell ghostscript clamav
 
 # Enable needed Apache modules
 a2enmod ssl rewrite headers
+a2enmod php8.1
 
 # Create directory for Moodle installation
 mkdir -p /var/www/html/moodle
 
 # Download Moodle - FIXED URL
 cd /tmp
-wget https://download.moodle.org/download.php/direct/stable401/moodle-4.1.7.tgz
+wget https://download.moodle.org/download.php/direct/stable405/moodle-4.5.2.tgz
 # Fallback URL if the first one fails
 if [ $? -ne 0 ]; then
   wget https://download.moodle.org/stable/4.1/moodle-4.1.7.tgz
 fi
 tar -xvzf moodle-*.tgz -C /var/www/html
 
-# Create moodledata directory for files
+# IMPORTANT: Remove any automatically generated config.php file to avoid syntax errors
+rm -f /var/www/html/moodle/config.php
+
+# Set appropriate permissions on the web root directory so Moodle can create its data directory
+chmod 777 /var/www/html
+
+# Create both possible moodledata directories with proper permissions
 mkdir -p /var/moodledata
 chmod 777 /var/moodledata
+mkdir -p /var/www/html/moodledata
+chmod 777 /var/www/html/moodledata
 
-# Set permissions
-chown -R www-data:www-data /var/www/html/moodle
+# Set proper ownership for all directories
+chown -R www-data:www-data /var/www/html
 chown -R www-data:www-data /var/moodledata
+chown -R www-data:www-data /var/www/html/moodledata
 
-# Mount file share
-mkdir -p /mnt/moodleshare
-echo "//${var.storage_account_name}.file.core.windows.net/moodlefiles /mnt/moodleshare cifs vers=3.0,username=${var.storage_account_name},password=${var.storage_account_key},dir_mode=0777,file_mode=0777,serverino" >> /etc/fstab
-mount -a
-
-# Generate random salt for Moodle
-MOODLE_SALT=$(openssl rand -hex 16)
-
-# Configure Moodle
-cat > /var/www/html/moodle/config.php <<EOF
-<?php
-unset(\$CFG);
-global \$CFG;
-\$CFG = new stdClass();
-
-\$CFG->dbtype    = 'pgsql';
-\$CFG->dblibrary = 'native';
-\$CFG->dbhost    = '${var.db_server_fqdn}';
-\$CFG->dbname    = '${var.db_name}';
-\$CFG->dbuser    = '${var.db_admin_username}@${split(".", var.db_server_fqdn)[0]}';
-\$CFG->dbpass    = '${var.db_admin_password}';
-\$CFG->prefix    = 'mdl_';
-\$CFG->dboptions = array(
-    'dbpersist' => false,
-    'dbsocket'  => false,
-    'dbport'    => '5432',
-    'dbhandlesoptions' => false,
-    'dbcollation' => 'utf8mb4_unicode_ci',
-);
-
-\$CFG->wwwroot   = 'http://${azurerm_public_ip.moodle_public_ip.ip_address}';
-\$CFG->dataroot  = '/var/moodledata';
-\$CFG->admin     = 'admin';
-\$CFG->directorypermissions = 0777;
-
-\$CFG->passwordsaltmain = '\$MOODLE_SALT';
-
-// Enable debugging during initial setup
-\$CFG->debug = E_ALL;
-\$CFG->debugdisplay = 1;
-
-require_once(__DIR__ . '/lib/setup.php');
-EOF
-
-# Configure Apache for Moodle
-cat > /etc/apache2/sites-available/moodle.conf <<EOF
+# Configure Apache for Moodle - Writing the file directly
+tee /etc/apache2/sites-available/moodle.conf > /dev/null << 'EOF'
 <VirtualHost *:80>
     ServerAdmin webmaster@localhost
     DocumentRoot /var/www/html/moodle
@@ -119,7 +99,6 @@ cat > /etc/apache2/sites-available/moodle.conf <<EOF
         AllowOverride All
         Require all granted
     </Directory>
-    
 </VirtualHost>
 EOF
 
@@ -127,27 +106,56 @@ EOF
 a2ensite moodle.conf
 a2dissite 000-default.conf
 
-# Restart Apache
-systemctl restart apache2
-
-# Install Moodle via CLI
-php /var/www/html/moodle/admin/cli/install.php --lang=en --wwwroot=http://${azurerm_public_ip.moodle_public_ip.ip_address} --dataroot=/var/moodledata --dbtype=pgsql --dbhost=${var.db_server_fqdn} --dbname=${var.db_name} --dbuser=${var.db_admin_username}@${split(".", var.db_server_fqdn)[0]} --dbpass=${var.db_admin_password} --dbport=5432 --prefix=mdl_ --fullname="${var.moodle_site_name}" --shortname="Moodle" --adminuser=${var.moodle_admin_user} --adminpass=${var.moodle_admin_password} --adminemail=${var.moodle_admin_email} --non-interactive --agree-license
-
-# Set up a cron job for Moodle
-echo "*/15 * * * * www-data /usr/bin/php /var/www/html/moodle/admin/cli/cron.php >/dev/null" > /etc/cron.d/moodle
-
-# Configure PHP settings for better performance
-cat > /etc/php/7.2/apache2/conf.d/99-moodle.ini <<EOF
+bash -c 'cat > /etc/php/8.1/apache2/conf.d/99-moodle.ini << EOF
 max_input_vars = 5000
 memory_limit = 256M
 post_max_size = 50M
 upload_max_filesize = 50M
 max_execution_time = 300
-EOF
+EOF'
 
-# Restart Apache to apply PHP settings
+# Restart Apache to apply settings
 systemctl restart apache2
 
+# Get the current VM's public IP
+PUBLIC_IP=$(curl -s http://checkip.amazonaws.com || echo "YOUR_VM_IP_ADDRESS")
+
+# Write installation instructions for the user
+cat > /home/azureadmin/moodle_setup_instructions.txt << EOF
+Moodle Installation Instructions
+===============================
+
+Your Moodle files have been installed and the web server has been configured.
+To complete the Moodle setup, follow these steps:
+
+1. Open a web browser and navigate to: http://$PUBLIC_IP
+
+2. You will be presented with the Moodle installation wizard.
+
+3. For the database setup, use these settings:
+   - Database type: PostgreSQL
+   - Database host: ${var.db_server_fqdn}
+   - Database name: ${var.db_name}
+   - Database user: ${var.db_admin_username}@${split(".", var.db_server_fqdn)[0]}
+   - Database password: (Your database password)
+   - Tables prefix: mdl_
+   - Database port: 5432
+
+4. For paths, you can use either:
+   - Moodle data directory: /var/www/html/moodledata (default)
+   OR
+   - Moodle data directory: /var/moodledata (more secure)
+
+5. Follow the remaining steps in the wizard to complete the installation.
+
+These instructions are saved in /home/azureadmin/moodle_setup_instructions.txt
+EOF
+
+# Make sure the instructions file is readable
+chown azureadmin:azureadmin /home/azureadmin/moodle_setup_instructions.txt
+chmod 644 /home/azureadmin/moodle_setup_instructions.txt
+
+echo "Moodle files have been installed. Please complete the setup through the web interface."
 EOT
 }
 
@@ -171,8 +179,8 @@ resource "azurerm_linux_virtual_machine" "moodle_vm" {
 
   source_image_reference {
     publisher = "Canonical"
-    offer     = "UbuntuServer"
-    sku       = "18.04-LTS"
+    offer     = "0001-com-ubuntu-server-focal"
+    sku       = "20_04-lts"
     version   = "latest"
   }
   

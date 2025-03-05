@@ -1,13 +1,3 @@
-output "diag_storage_account_id" {
-  description = "ID of the diagnostics storage account"
-  value       = azurerm_storage_account.diag_storage.id
-}
-
-output "diag_storage_account_name" {
-  description = "Name of the diagnostics storage account"
-  value       = azurerm_storage_account.diag_storage.name
-}
-
 output "action_group_id" {
   description = "ID of the monitoring action group"
   value       = azurerm_monitor_action_group.vm_action_group.id

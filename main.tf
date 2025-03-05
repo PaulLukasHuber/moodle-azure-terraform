@@ -89,25 +89,3 @@ module "security" {
   subnet_ids          = module.networking.subnet_ids
   tags                = var.tags
 }
-
-# Update the Moodle configuration to use the actual database FQDN after it's created
-resource "null_resource" "update_moodle_config" {
-  # This will run a script on the VM to update the Moodle config with the actual database FQDN
-  depends_on = [module.compute, module.database]
-
-  # This triggers the resource to run when the database FQDN changes
-  triggers = {
-    db_server_fqdn = module.database.db_server_fqdn
-  }
-
-  # Use Azure CLI to run a command on the VM
-  provisioner "local-exec" {
-    command = <<-EOT
-      az vm run-command invoke \
-        --resource-group ${azurerm_resource_group.moodle_rg.name} \
-        --name ${var.vm_name} \
-        --command-id RunShellScript \
-        --scripts 'sed -i "s|dbhost.*|dbhost    = \"${module.database.db_server_fqdn}\";|g" /var/www/html/moodle/config.php'
-    EOT
-  }
-}
