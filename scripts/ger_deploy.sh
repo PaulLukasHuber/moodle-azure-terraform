@@ -3,34 +3,29 @@
 # ======================================================
 # Moodle Deployment Script - Azure via Terraform
 # ======================================================
-# This script automates the deployment of Moodle to Azure
-# using Terraform. It handles:
-# - Environment checks (Terraform, Azure CLI)
-# - Terraform initialization, validation, and apply
-# - Detailed logging of deployment process
-# - Generation of a summary file with important outputs
+# Automatisiert das Deployment von Moodle auf Azure
+# Erstellt separate Logs für Deployment und wichtige Infos
 # ======================================================
 
 set -e
 
-# Configuration variables
+# Konfiguration
 LOG_DIR="./logs"
 DEPLOY_LOG="${LOG_DIR}/deploy_$(date +%Y%m%d_%H%M%S).log"
 INFO_LOG="${LOG_DIR}/deployment_info.txt"
 MODULES_DIR="./Modules"
 
-# Color codes for terminal output
+# Farben für Terminalausgabe
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[0;33m'
 BLUE='\033[0;34m'
-NC='\033[0m' # No Color
+NC='\033[0m'
 
 # ======================================================
-# Helper Functions
+# Hilfsfunktionen
 # ======================================================
 
-# Log messages to both console and log file with colors
 log() {
   local message="$1"
   local level="${2:-INFO}"
@@ -38,7 +33,6 @@ log() {
   mkdir -p "$LOG_DIR"
   local formatted_message="[$timestamp] [$level] $message"
   echo "$formatted_message" >> "$DEPLOY_LOG"
-
   case "$level" in
     "INFO") echo -e "${BLUE}$formatted_message${NC}" ;;
     "SUCCESS") echo -e "${GREEN}$formatted_message${NC}" ;;
@@ -48,107 +42,102 @@ log() {
   esac
 }
 
-# Check if a command exists
 command_exists() {
   command -v "$1" >/dev/null 2>&1
 }
 
-# Check required dependencies (Terraform & Azure CLI)
 check_dependencies() {
-  log "Checking dependencies..."
+  log "Prüfe Abhängigkeiten..."
   if ! command_exists terraform; then
-    log "Terraform is not installed. Please install Terraform." "ERROR"
+    log "Terraform nicht installiert. Bitte installieren." "ERROR"
     exit 1
   fi
   if ! command_exists az; then
-    log "Azure CLI is not installed. Please install Azure CLI." "ERROR"
+    log "Azure CLI nicht installiert. Bitte installieren." "ERROR"
     exit 1
   fi
-  log "All dependencies are installed." "SUCCESS"
+  log "Alle Abhängigkeiten vorhanden." "SUCCESS"
 }
 
-# Check Azure login status and prompt login if necessary
 check_azure_login() {
-  log "Checking Azure login status..."
+  log "Prüfe Azure Login Status..."
   if ! az account show &>/dev/null; then
-    log "Not logged into Azure. Running 'az login'..." "WARNING"
+    log "Nicht bei Azure angemeldet. Bitte 'az login' ausführen." "ERROR"
     az login
+  else
+    local account=$(az account show --query name -o tsv)
+    log "Eingeloggt in Azure Subscription: $account" "SUCCESS"
   fi
-
-  local account=$(az account show --query name -o tsv)
-  log "Logged into Azure subscription: $account" "SUCCESS"
 }
 
-# Run Terraform commands (init, validate, plan, apply)
 run_terraform() {
-  log "Starting Terraform deployment..." "INFO"
+  log "Starte Terraform Deployment..." "INFO"
 
-  # Initialize Terraform (including modules)
-  log "Initializing Terraform..." "INFO"
+  # Initialisierung (inkl. Module)
+  log "Initialisiere Terraform (inkl. Module)..." "INFO"
   terraform init | tee -a "$DEPLOY_LOG"
 
-  # Validate Terraform configuration
-  log "Validating Terraform configuration..." "INFO"
+  # Validierung der Konfiguration
+  log "Validiere Terraform-Konfiguration..." "INFO"
   terraform validate | tee -a "$DEPLOY_LOG"
 
-  # Create Terraform plan
-  log "Creating Terraform plan..." "INFO"
+  # Erstelle Plan
+  log "Erstelle Terraform Plan..." "INFO"
   terraform plan -out=moodle.tfplan | tee -a "$DEPLOY_LOG"
 
-  # Apply Terraform plan automatically without prompt
-  log "Applying Terraform plan..." "INFO"
+  # Anwenden des Plans
+  log "Wende Terraform Plan an..." "INFO"
   terraform apply -auto-approve moodle.tfplan | tee -a "$DEPLOY_LOG"
 
-  log "Terraform deployment completed successfully." "SUCCESS"
+  log "Terraform Deployment abgeschlossen." "SUCCESS"
 }
 
-# Generate deployment summary file with important outputs
 generate_summary() {
-log "Generating deployment summary..." "INFO"
+  log "Generiere Deployment-Zusammenfassung..." "INFO"
 
 cat > "$INFO_LOG" <<EOF
 
-Moodle Deployment Information (Deployed on $(date))
+Moodle Deployment Informationen (Deployzeit: $(date))
 =======================================================
 
 Resource Group: $(terraform output -raw resource_group_name)
 Moodle URL: $(terraform output -raw moodle_url)
 Moodle Admin URL: $(terraform output -raw moodle_admin_url)
 
-Connection Instructions:
+Verbindungsinformationen:
 $(terraform output -raw connection_instructions)
 
-Note: It may take a few minutes for Moodle to fully initialize after deployment.
+Hinweis: Es kann einige Minuten dauern, bis Moodle vollständig initialisiert ist.
 
 EOF
 
-log "Deployment information saved to $INFO_LOG" "SUCCESS"
+log "Deployment Informationen gespeichert in $INFO_LOG" "SUCCESS"
 
 echo ""
-echo -e "${GREEN}Important Information:${NC}"
+echo -e "${GREEN}Wichtige Informationen:${NC}"
 echo "- Moodle URL: $(terraform output -raw moodle_url)"
 echo "- Moodle Admin URL: $(terraform output -raw moodle_admin_url)"
 echo "- Resource Group: $(terraform output -raw resource_group_name)"
 echo ""
-echo "- Connection Instructions:"
+echo "- Verbindungshinweise:"
 echo "$(terraform output -raw connection_instructions)"
 }
 
 # ======================================================
-# Main Script Execution
+# Hauptausführung des Skripts
 # ======================================================
 
 main() {
-
+  
 mkdir -p "$LOG_DIR"
 
 echo -e "${GREEN}"
 echo -e "==================================================="
-echo -e " Moodle Deployment to Azure via Terraform "
+echo -e " Moodle Deployment zu Azure via Terraform "
 echo -e "==================================================="
 echo -e "${NC}"
 
-log "Starting Moodle deployment process..."
+log "Starte Moodle Deployment Prozess..."
 
 check_dependencies
 check_azure_login
@@ -156,7 +145,7 @@ run_terraform
 generate_summary
 
 log ""
-log "Detailed deployment log saved to: $DEPLOY_LOG"
+log "Deployment Log gespeichert in: $DEPLOY_LOG" 
 
 }
 
