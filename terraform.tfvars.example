@@ -1,6 +1,15 @@
-# General configuration
+# =================================================================
+# EXAMPLE TERRAFORM VARIABLES FILE
+# =================================================================
+# Copy this file to terraform.tfvars and customize the values
+# to match your deployment requirements
+# =================================================================
+
+# =================================================================
+# GENERAL CONFIGURATION
+# =================================================================
 resource_group_name = "moodle-resources"
-location            = "westeurope" # Select a region near you
+location            = "westeurope"  # Select a region near your users
 tags = {
   environment = "production"
   project     = "moodle-lms"
@@ -8,28 +17,38 @@ tags = {
   owner       = "student-group"
 }
 
-# Networking configuration
+# =================================================================
+# NETWORKING CONFIGURATION
+# =================================================================
 vnet_name       = "moodle-vnet"
-address_space   = ["10.0.0.0/16"]
+address_space   = ["10.0.0.0/16"]  # Large CIDR block with room for expansion
 subnet_prefixes = ["10.0.1.0/24", "10.0.2.0/24", "10.0.3.0/24"]
 subnet_names    = ["web-subnet", "db-subnet", "pe-subnet"]
 
-# Storage configuration
-storage_account_name = "moodlestorage25"  # Must be globally unique
+# =================================================================
+# STORAGE CONFIGURATION
+# =================================================================
+storage_account_name = "moodlestorage25"  # Must be globally unique in Azure
 
-# Database configuration
-db_server_name     = "moodle-postgres-25"  # Must be globally unique
+# =================================================================
+# DATABASE CONFIGURATION
+# =================================================================
+db_server_name     = "moodle-postgres-25"  # Must be globally unique in Azure
 db_name            = "moodledb"
 db_admin_username  = "moodleadmin"
 db_admin_password  = "YourStrongPasswordHere12345!"  # Replace with a secure password
 
-# Virtual Machine configuration
+# =================================================================
+# VIRTUAL MACHINE CONFIGURATION
+# =================================================================
 vm_name           = "moodle-vm"
-vm_size           = "Standard_B2s"  # Consider budget constraints
+vm_size           = "Standard_B2s"  # Cost-effective size for small to medium deployments
 vm_admin_username = "azureadmin"
 vm_admin_password = "YourStrongPasswordHere12345!"  # Replace with a secure password
 
-# Moodle configuration
+# =================================================================
+# MOODLE APPLICATION CONFIGURATION
+# =================================================================
 moodle_admin_email    = "admin@yourschool.edu"
 moodle_admin_user     = "moodleadmin"
 moodle_admin_password = "YourStrongPasswordHere12345!"  # Replace with a secure password

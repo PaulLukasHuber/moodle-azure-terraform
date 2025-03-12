@@ -1,14 +1,24 @@
-# General variables
+# =================================================================
+# MAIN VARIABLES FILE
+# =================================================================
+# This file defines all variables that can be used for customizing
+# the Moodle deployment. Values can be overridden in terraform.tfvars
+# =================================================================
+
+# =================================================================
+# GENERAL CONFIGURATION VARIABLES
+# =================================================================
+
 variable "resource_group_name" {
   description = "Name of the resource group"
   type        = string
-  default     = "moodle-resources"
+  default     = "moodle-resources"  # Use a descriptive name
 }
 
 variable "location" {
   description = "Azure region to deploy resources"
   type        = string
-  default     = "westeurope"
+  default     = "westeurope"  # Change to a region closer to your users
 }
 
 variable "tags" {
@@ -18,9 +28,13 @@ variable "tags" {
     environment = "development"
     project     = "moodle-lms"
   }
+  # Tags help with resource organization and cost tracking
 }
 
-# Networking variables
+# =================================================================
+# NETWORKING VARIABLES
+# =================================================================
+
 variable "vnet_name" {
   description = "Name of the virtual network"
   type        = string
@@ -30,33 +44,41 @@ variable "vnet_name" {
 variable "address_space" {
   description = "Address space for the virtual network"
   type        = list(string)
-  default     = ["10.0.0.0/16"]
+  default     = ["10.0.0.0/16"]  # Large CIDR block for VNet
 }
 
 variable "subnet_prefixes" {
   description = "Address prefixes for subnets"
   type        = list(string)
   default     = ["10.0.1.0/24", "10.0.2.0/24", "10.0.3.0/24"]
+  # Three subnets: web tier, database tier, and private endpoints
 }
 
 variable "subnet_names" {
   description = "Names for subnets"
   type        = list(string)
   default     = ["web-subnet", "db-subnet", "pe-subnet"]
+  # Each subnet hosts different components of the architecture
 }
 
-# Storage variables
+# =================================================================
+# STORAGE VARIABLES
+# =================================================================
+
 variable "storage_account_name" {
   description = "Name of the storage account for Moodle files"
   type        = string
-  default     = "moodlestorage"
+  default     = "moodlestorage"  # Must be globally unique in Azure
 }
 
-# Database variables
+# =================================================================
+# DATABASE VARIABLES
+# =================================================================
+
 variable "db_server_name" {
   description = "Name for the PostgreSQL server"
   type        = string
-  default     = "moodle-postgres"
+  default     = "moodle-postgres"  # Must be globally unique in Azure
 }
 
 variable "db_name" {
@@ -74,10 +96,13 @@ variable "db_admin_username" {
 variable "db_admin_password" {
   description = "Password for the database administrator"
   type        = string
-  sensitive   = true
+  sensitive   = true  # Marked as sensitive to avoid showing in logs
 }
 
-# Compute variables
+# =================================================================
+# COMPUTE VARIABLES
+# =================================================================
+
 variable "vm_name" {
   description = "Name for the Moodle VM"
   type        = string
@@ -87,7 +112,7 @@ variable "vm_name" {
 variable "vm_size" {
   description = "Size of the VM"
   type        = string
-  default     = "Standard_B1ms"  # Budget-friendly size
+  default     = "Standard_B1ms"  # Budget-friendly size for development
 }
 
 variable "vm_admin_username" {
@@ -99,10 +124,13 @@ variable "vm_admin_username" {
 variable "vm_admin_password" {
   description = "Password for the VM administrator"
   type        = string
-  sensitive   = true
+  sensitive   = true  # Marked as sensitive to avoid showing in logs
 }
 
-# Moodle variables
+# =================================================================
+# MOODLE APPLICATION VARIABLES
+# =================================================================
+
 variable "moodle_admin_email" {
   description = "Email for the Moodle administrator"
   type        = string
@@ -118,7 +146,7 @@ variable "moodle_admin_user" {
 variable "moodle_admin_password" {
   description = "Password for the Moodle administrator"
   type        = string
-  sensitive   = true
+  sensitive   = true  # Marked as sensitive to avoid showing in logs
 }
 
 variable "moodle_site_name" {

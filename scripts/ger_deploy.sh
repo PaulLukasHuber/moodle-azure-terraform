@@ -1,31 +1,39 @@
 #!/bin/bash
 
-# ======================================================
-# Moodle Deployment Script - Azure via Terraform
-# ======================================================
-# Automatisiert das Deployment von Moodle auf Azure
-# Erstellt separate Logs für Deployment und wichtige Infos
-# ======================================================
+# =================================================================
+# MOODLE DEPLOYMENT SKRIPT - AZURE MIT TERRAFORM
+# =================================================================
+# Dieses Skript automatisiert die Bereitstellung von Moodle auf Azure
+# unter Verwendung von Terraform. Es übernimmt:
+# - Umgebungsprüfungen (Terraform, Azure CLI)
+# - Terraform-Initialisierung, Validierung und Anwendung
+# - Detaillierte Protokollierung des Bereitstellungsprozesses
+# - Erstellung einer Zusammenfassung mit wichtigen Ausgaben
+# =================================================================
 
-set -e
+set -e  # Beendet das Skript sofort, wenn ein Befehl mit Fehler endet
 
-# Konfiguration
+# =================================================================
+# KONFIGURATIONSVARIABLEN
+# =================================================================
 LOG_DIR="./logs"
 DEPLOY_LOG="${LOG_DIR}/deploy_$(date +%Y%m%d_%H%M%S).log"
 INFO_LOG="${LOG_DIR}/deployment_info.txt"
 MODULES_DIR="./Modules"
 
-# Farben für Terminalausgabe
+# Farbcodes für Terminalausgabe zur besseren Lesbarkeit
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[0;33m'
 BLUE='\033[0;34m'
-NC='\033[0m'
+NC='\033[0m'  # Keine Farbe
 
-# ======================================================
-# Hilfsfunktionen
-# ======================================================
+# =================================================================
+# HILFSFUNKTIONEN
+# =================================================================
 
+# Protokolliert Nachrichten sowohl in Konsole als auch in Logdatei mit Farben
+# Verwendung: log "Nachricht" [INFO|SUCCESS|WARNING|ERROR]
 log() {
   local message="$1"
   local level="${2:-INFO}"
@@ -42,10 +50,13 @@ log() {
   esac
 }
 
+# Prüft, ob ein Befehl existiert
+# Verwendung: command_exists terraform
 command_exists() {
   command -v "$1" >/dev/null 2>&1
 }
 
+# Überprüft, ob erforderliche Abhängigkeiten installiert sind
 check_dependencies() {
   log "Prüfe Abhängigkeiten..."
   if ! command_exists terraform; then
@@ -59,6 +70,7 @@ check_dependencies() {
   log "Alle Abhängigkeiten vorhanden." "SUCCESS"
 }
 
+# Überprüft den Azure-Anmeldestatus und fordert bei Bedarf zur Anmeldung auf
 check_azure_login() {
   log "Prüfe Azure Login Status..."
   if ! az account show &>/dev/null; then
@@ -67,34 +79,37 @@ check_azure_login() {
   else
     local account=$(az account show --query name -o tsv)
     log "Eingeloggt in Azure Subscription: $account" "SUCCESS"
-  fi
+  }
 }
 
+# Führt Terraform-Befehle aus (init, validate, plan, apply)
 run_terraform() {
   log "Starte Terraform Deployment..." "INFO"
 
-  # Initialisierung (inkl. Module)
+  # Terraform initialisieren (inkl. Module)
   log "Initialisiere Terraform (inkl. Module)..." "INFO"
   terraform init | tee -a "$DEPLOY_LOG"
 
-  # Validierung der Konfiguration
+  # Terraform-Konfiguration validieren
   log "Validiere Terraform-Konfiguration..." "INFO"
   terraform validate | tee -a "$DEPLOY_LOG"
 
-  # Erstelle Plan
+  # Terraform-Plan erstellen
   log "Erstelle Terraform Plan..." "INFO"
   terraform plan -out=moodle.tfplan | tee -a "$DEPLOY_LOG"
 
-  # Anwenden des Plans
+  # Terraform-Plan automatisch anwenden ohne Bestätigung
   log "Wende Terraform Plan an..." "INFO"
   terraform apply -auto-approve moodle.tfplan | tee -a "$DEPLOY_LOG"
 
   log "Terraform Deployment abgeschlossen." "SUCCESS"
 }
 
+# Erstellt eine Zusammenfassung der Bereitstellung mit wichtigen Informationen
 generate_summary() {
   log "Generiere Deployment-Zusammenfassung..." "INFO"
 
+# Erstellt eine Zusammenfassungsdatei mit den wichtigen Terraform-Outputs
 cat > "$INFO_LOG" <<EOF
 
 Moodle Deployment Informationen (Deployzeit: $(date))
@@ -113,6 +128,7 @@ EOF
 
 log "Deployment Informationen gespeichert in $INFO_LOG" "SUCCESS"
 
+# Zeigt wichtige Informationen auch in der Konsole an
 echo ""
 echo -e "${GREEN}Wichtige Informationen:${NC}"
 echo "- Moodle URL: $(terraform output -raw moodle_url)"
@@ -123,9 +139,9 @@ echo "- Verbindungshinweise:"
 echo "$(terraform output -raw connection_instructions)"
 }
 
-# ======================================================
-# Hauptausführung des Skripts
-# ======================================================
+# =================================================================
+# HAUPTAUSFÜHRUNG DES SKRIPTS
+# =================================================================
 
 main() {
   
@@ -149,4 +165,5 @@ log "Deployment Log gespeichert in: $DEPLOY_LOG"
 
 }
 
+# Führt die Hauptfunktion aus
 main

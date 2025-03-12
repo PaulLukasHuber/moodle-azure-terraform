@@ -1,32 +1,42 @@
-# Public IP for Moodle VM
+# =================================================================
+# COMPUTE MODULE - MAIN CONFIGURATION
+# =================================================================
+# This module creates and configures the virtual machine that hosts
+# the Moodle LMS application with all necessary configurations
+# =================================================================
+
+# Create a public IP address for the Moodle VM
 resource "azurerm_public_ip" "moodle_public_ip" {
-  name                = "${var.vm_name}-pip"
+  name                = "${var.vm_name}-pip"  # Naming convention: <vm-name>-pip
   location            = var.location
   resource_group_name = var.resource_group_name
-  allocation_method   = "Static"
-  sku                 = "Basic"
+  allocation_method   = "Static"  # Static IP ensures it doesn't change after VM restarts
+  sku                 = "Basic"   # Basic SKU is sufficient for this use case
   tags                = var.tags
   
-  # Adding a domain name label
-  domain_name_label   = lower(var.vm_name)
+  # Adding a domain name label for DNS resolution
+  domain_name_label   = lower(var.vm_name)  # Creates a FQDN like moodle-vm.westeurope.cloudapp.azure.com
 }
 
-# Network interface for Moodle VM
+# Create a network interface for the Moodle VM
 resource "azurerm_network_interface" "moodle_nic" {
-  name                = "${var.vm_name}-nic"
+  name                = "${var.vm_name}-nic"  # Naming convention: <vm-name>-nic
   location            = var.location
   resource_group_name = var.resource_group_name
   tags                = var.tags
 
   ip_configuration {
     name                          = "internal"
-    subnet_id                     = var.subnet_id
-    private_ip_address_allocation = "Dynamic"
-    public_ip_address_id          = azurerm_public_ip.moodle_public_ip.id
+    subnet_id                     = var.subnet_id  # Connect to the web tier subnet
+    private_ip_address_allocation = "Dynamic"      # Dynamically assign a private IP
+    public_ip_address_id          = azurerm_public_ip.moodle_public_ip.id  # Attach the public IP
   }
 }
 
-# Prepare custom data script for VM initialization
+# =================================================================
+# VM INITIALIZATION SCRIPT
+# =================================================================
+# Prepare the custom data script for VM initialization using heredoc syntax
 locals {
   moodle_setup_script = <<-EOT
 #!/bin/bash
@@ -43,10 +53,10 @@ apt install -y software-properties-common
 add-apt-repository ppa:ondrej/php -y
 apt update
 
-# Install Apache
+# Install Apache web server
 apt install -y apache2
 
-# Install PHP 8.1 and required extensions
+# Install PHP 8.1 and required extensions for Moodle
 apt install -y php8.1 libapache2-mod-php8.1
 apt install -y php8.1-common php8.1-curl php8.1-gd php8.1-intl php8.1-mbstring
 apt install -y php8.1-xml php8.1-xmlrpc php8.1-soap php8.1-zip php8.1-pgsql 
@@ -106,6 +116,7 @@ EOF
 a2ensite moodle.conf
 a2dissite 000-default.conf
 
+# Configure PHP settings for optimal Moodle performance
 bash -c 'cat > /etc/php/8.1/apache2/conf.d/99-moodle.ini << EOF
 max_input_vars = 5000
 memory_limit = 256M
@@ -159,24 +170,28 @@ echo "Moodle files have been installed. Please complete the setup through the we
 EOT
 }
 
-# Create Moodle VM
+# =================================================================
+# VIRTUAL MACHINE CONFIGURATION
+# =================================================================
+# Create the Linux VM that will host Moodle
 resource "azurerm_linux_virtual_machine" "moodle_vm" {
   name                  = var.vm_name
   location              = var.location
   resource_group_name   = var.resource_group_name
-  size                  = var.vm_size
+  size                  = var.vm_size  # VM size determines compute resources and cost
   admin_username        = var.admin_username
   admin_password        = var.admin_password
-  disable_password_authentication = false
+  disable_password_authentication = false  # Allow password authentication for simplicity
   network_interface_ids = [azurerm_network_interface.moodle_nic.id]
   tags                  = var.tags
 
   os_disk {
-    caching              = "ReadWrite"
-    storage_account_type = "Standard_LRS"
-    disk_size_gb         = 30
+    caching              = "ReadWrite"  # Improves disk performance
+    storage_account_type = "Standard_LRS"  # Standard locally redundant storage
+    disk_size_gb         = 30  # 30 GB is sufficient for OS and Moodle
   }
 
+  # Use Ubuntu 20.04 LTS as the base image
   source_image_reference {
     publisher = "Canonical"
     offer     = "0001-com-ubuntu-server-focal"
@@ -184,5 +199,6 @@ resource "azurerm_linux_virtual_machine" "moodle_vm" {
     version   = "latest"
   }
   
+  # Pass the setup script as base64-encoded custom data
   custom_data = base64encode(local.moodle_setup_script)
 }
