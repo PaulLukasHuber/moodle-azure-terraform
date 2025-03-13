@@ -40,65 +40,129 @@ resource "azurerm_network_interface" "moodle_nic" {
 locals {
   moodle_setup_script = <<-EOT
 #!/bin/bash
+# cloud-config
+# vim: syntax=yaml
 
-# Set to exit script if any command fails
+# Set up logging for better debugging
+exec > >(tee /var/log/moodle-setup.log|logger -t moodle-setup -s 2>/dev/console) 2>&1
+echo "Starting Moodle setup script at $(date)"
+
+# =================================================================
+# MOODLE SETUP SCRIPT
+# =================================================================
+# This script installs and configures all necessary components
+# for running Moodle LMS on Ubuntu 20.04
+# =================================================================
+
+# Set to exit script if any command fails for better error detection
 set -e
 
-# Update system packages
+# =================================================================
+# SYSTEM PREPARATION
+# =================================================================
+
+# Check if cloud-init is installed and install if needed
+if ! command -v cloud-init &> /dev/null; then
+    echo "Installing cloud-init..."
+    apt-get update
+    apt-get install -y cloud-init
+fi
+
+# Update package repositories and upgrade existing packages
+echo "Updating system packages..."
 apt update
 apt upgrade -y
 
-# Add PPA repository for PHP 8.1
+# Add PHP repository to get the required PHP version
+echo "Setting up PHP repository..."
 apt install -y software-properties-common
 add-apt-repository ppa:ondrej/php -y
 apt update
 
+# =================================================================
+# WEB SERVER INSTALLATION
+# =================================================================
+
 # Install Apache web server
+echo "Installing Apache web server..."
 apt install -y apache2
 
-# Install PHP 8.1 and required extensions for Moodle
+# Install PHP 8.1 with all extensions required by Moodle
+echo "Installing PHP 8.1 and required extensions..."
 apt install -y php8.1 libapache2-mod-php8.1
 apt install -y php8.1-common php8.1-curl php8.1-gd php8.1-intl php8.1-mbstring
 apt install -y php8.1-xml php8.1-xmlrpc php8.1-soap php8.1-zip php8.1-pgsql 
 apt install -y php8.1-opcache
 
-# Install additional utilities needed for Moodle
+# Install additional utilities needed for full Moodle functionality
+echo "Installing additional utilities for Moodle..."
 apt install -y graphviz aspell ghostscript clamav
 
-# Enable needed Apache modules
+# =================================================================
+# APACHE CONFIGURATION
+# =================================================================
+
+# Enable necessary Apache modules for Moodle
+echo "Enabling Apache modules..."
 a2enmod ssl rewrite headers
 a2enmod php8.1
 
+# =================================================================
+# MOODLE INSTALLATION
+# =================================================================
+
 # Create directory for Moodle installation
+echo "Creating Moodle installation directory..."
 mkdir -p /var/www/html/moodle
 
-# Download Moodle - FIXED URL
+# Download the latest stable Moodle release
+echo "Downloading Moodle..."
 cd /tmp
 wget https://download.moodle.org/download.php/direct/stable405/moodle-4.5.2.tgz
 # Fallback URL if the first one fails
 if [ $? -ne 0 ]; then
+  echo "Primary download failed, trying fallback URL..."
   wget https://download.moodle.org/stable/4.1/moodle-4.1.7.tgz
 fi
+
+# Extract Moodle files to web directory
+echo "Extracting Moodle files..."
 tar -xvzf moodle-*.tgz -C /var/www/html
 
-# IMPORTANT: Remove any automatically generated config.php file to avoid syntax errors
+# IMPORTANT: Remove any automatically generated config.php to avoid conflicts
+echo "Removing default config.php if it exists..."
 rm -f /var/www/html/moodle/config.php
 
-# Set appropriate permissions on the web root directory so Moodle can create its data directory
+# =================================================================
+# DIRECTORY SETUP AND PERMISSIONS
+# =================================================================
+
+# Set appropriate permissions on the web root directory
+echo "Setting directory permissions..."
 chmod 777 /var/www/html
 
 # Create both possible moodledata directories with proper permissions
-mkdir -p /var/moodledata
-chmod 777 /var/moodledata
+# Option 1: Standard location within web directory
+echo "Creating moodledata directories..."
 mkdir -p /var/www/html/moodledata
 chmod 777 /var/www/html/moodledata
 
+# Option 2: More secure location outside web directory
+mkdir -p /var/moodledata
+chmod 777 /var/moodledata
+
 # Set proper ownership for all directories
+echo "Setting directory ownership..."
 chown -R www-data:www-data /var/www/html
 chown -R www-data:www-data /var/moodledata
 chown -R www-data:www-data /var/www/html/moodledata
 
-# Configure Apache for Moodle - Writing the file directly
+# =================================================================
+# APACHE SITE CONFIGURATION
+# =================================================================
+
+# Configure Apache for Moodle - Creating a dedicated virtual host
+echo "Configuring Apache for Moodle..."
 tee /etc/apache2/sites-available/moodle.conf > /dev/null << 'EOF'
 <VirtualHost *:80>
     ServerAdmin webmaster@localhost
@@ -113,10 +177,16 @@ tee /etc/apache2/sites-available/moodle.conf > /dev/null << 'EOF'
 EOF
 
 # Enable the Moodle site and disable the default site
+echo "Enabling Moodle site in Apache..."
 a2ensite moodle.conf
 a2dissite 000-default.conf
 
+# =================================================================
+# PHP CONFIGURATION
+# =================================================================
+
 # Configure PHP settings for optimal Moodle performance
+echo "Configuring PHP for Moodle..."
 bash -c 'cat > /etc/php/8.1/apache2/conf.d/99-moodle.ini << EOF
 max_input_vars = 5000
 memory_limit = 256M
@@ -126,49 +196,16 @@ max_execution_time = 300
 EOF'
 
 # Restart Apache to apply settings
+echo "Restarting Apache..."
 systemctl restart apache2
 
-# Get the current VM's public IP
-PUBLIC_IP=$(curl -s http://checkip.amazonaws.com || echo "YOUR_VM_IP_ADDRESS")
+# Create a marker file to indicate successful completion
+echo "Setup completed successfully at $(date)" > /var/log/moodle-setup-complete
 
-# Write installation instructions for the user
-cat > /home/azureadmin/moodle_setup_instructions.txt << EOF
-Moodle Installation Instructions
-===============================
-
-Your Moodle files have been installed and the web server has been configured.
-To complete the Moodle setup, follow these steps:
-
-1. Open a web browser and navigate to: http://$PUBLIC_IP
-
-2. You will be presented with the Moodle installation wizard.
-
-3. For the database setup, use these settings:
-   - Database type: PostgreSQL
-   - Database host: ${var.db_server_fqdn}
-   - Database name: ${var.db_name}
-   - Database user: ${var.db_admin_username}@${split(".", var.db_server_fqdn)[0]}
-   - Database password: (Your database password)
-   - Tables prefix: mdl_
-   - Database port: 5432
-
-4. For paths, you can use either:
-   - Moodle data directory: /var/www/html/moodledata (default)
-   OR
-   - Moodle data directory: /var/moodledata (more secure)
-
-5. Follow the remaining steps in the wizard to complete the installation.
-
-These instructions are saved in /home/azureadmin/moodle_setup_instructions.txt
-EOF
-
-# Make sure the instructions file is readable
-chown azureadmin:azureadmin /home/azureadmin/moodle_setup_instructions.txt
-chmod 644 /home/azureadmin/moodle_setup_instructions.txt
-
-echo "Moodle files have been installed. Please complete the setup through the web interface."
+echo "Moodle setup complete."
 EOT
 }
+
 
 # =================================================================
 # VIRTUAL MACHINE CONFIGURATION
@@ -201,4 +238,49 @@ resource "azurerm_linux_virtual_machine" "moodle_vm" {
   
   # Pass the setup script as base64-encoded custom data
   custom_data = base64encode(local.moodle_setup_script)
+  
+  # Use a null_resource with a depends_on to verify script execution after VM is fully ready
+}
+
+# Separate null_resource for script verification to allow more control over the connection
+resource "null_resource" "verify_script_execution" {
+  # Only run this after the VM is fully provisioned
+  depends_on = [azurerm_linux_virtual_machine.moodle_vm]
+
+  # Add a small delay to ensure VM is fully booted and network is stable
+  provisioner "local-exec" {
+    command = "sleep 120"  # 2-minute delay
+  }
+
+  provisioner "remote-exec" {
+    inline = [
+      "echo 'Checking if cloud-init completed...'",
+      "sudo cloud-init status || echo 'Cloud-init status command failed'",
+      "echo 'Checking for setup completion marker...'",
+      "if sudo test -f /var/log/moodle-setup-complete; then",
+      "  echo 'Moodle setup completed successfully'",
+      "  sudo cat /var/log/moodle-setup-complete",
+      "else",
+      "  echo 'Moodle setup marker file not found'",
+      "  echo 'Checking if setup log exists...'",
+      "  if sudo test -f /var/log/moodle-setup.log; then",
+      "    echo 'Displaying last 50 lines of setup log:'",
+      "    sudo tail -n 50 /var/log/moodle-setup.log",
+      "  else",
+      "    echo 'Setup log not found. Checking cloud-init logs:'",
+      "    sudo grep -r moodle /var/log/cloud-init* || echo 'No moodle references in cloud-init logs'",
+      "  fi",
+      "fi"
+    ]
+
+    connection {
+      type                = "ssh"
+      user                = var.admin_username
+      password            = var.admin_password
+      host                = azurerm_public_ip.moodle_public_ip.ip_address
+      timeout             = "5m"
+      agent               = false
+      
+    }
+  }
 }

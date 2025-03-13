@@ -1,4 +1,10 @@
 #!/bin/bash
+# cloud-config
+# vim: syntax=yaml
+
+# Set up logging for better debugging
+exec > >(tee /var/log/moodle-setup.log|logger -t moodle-setup -s 2>/dev/console) 2>&1
+echo "Starting Moodle setup script at $(date)"
 
 # =================================================================
 # MOODLE SETUP SCRIPT
@@ -13,6 +19,13 @@ set -e
 # =================================================================
 # SYSTEM PREPARATION
 # =================================================================
+
+# Check if cloud-init is installed and install if needed
+if ! command -v cloud-init &> /dev/null; then
+    echo "Installing cloud-init..."
+    apt-get update
+    apt-get install -y cloud-init
+fi
 
 # Update package repositories and upgrade existing packages
 echo "Updating system packages..."
@@ -145,98 +158,7 @@ EOF'
 echo "Restarting Apache..."
 systemctl restart apache2
 
-# =================================================================
-# SETUP INSTRUCTIONS
-# =================================================================
+# Create a marker file to indicate successful completion
+echo "Setup completed successfully at $(date)" > /var/log/moodle-setup-complete
 
-# Get the current VM's public IP
-PUBLIC_IP=$(curl -s http://checkip.amazonaws.com || echo "YOUR_VM_IP_ADDRESS")
-
-# Create detailed setup instructions for the administrator
-echo "Creating setup instructions..."
-cat > /home/azureadmin/moodle_setup_instructions.txt << EOL
-=====================================================================
-MOODLE INSTALLATION INSTRUCTIONS
-=====================================================================
-
-Your Moodle files have been successfully installed and the web server 
-has been configured. To complete the setup, follow these detailed steps:
-
-1. ACCESSING THE INSTALLATION WIZARD
----------------------------------------------------------------------
-   Open a web browser and navigate to:
-   http://${PUBLIC_IP}
-
-2. LANGUAGE SELECTION
----------------------------------------------------------------------
-   Select your preferred language and click "Next".
-
-3. DATABASE CONFIGURATION
----------------------------------------------------------------------
-   When prompted for database details, use these exact settings:
-   
-   - Database type:     PostgreSQL
-   - Database host:     @@DB_SERVER_FQDN@@
-   - Database name:     @@DB_NAME@@
-   - Database username: @@DB_ADMIN_USERNAME@@@@@@DB_SERVER_PREFIX@@
-   - Database password: [Use the password you defined in terraform.tfvars]
-   - Tables prefix:     mdl_
-   - Database port:     5432
-
-   Note: The username format is important - it must include both the 
-   username and server prefix as shown above.
-
-4. DATA DIRECTORY CONFIGURATION
----------------------------------------------------------------------
-   You have two options for the Moodle data directory:
-   
-   Option 1 (Default): /var/www/html/moodledata
-   This location is easier to set up, but less secure.
-   
-   Option 2 (Recommended): /var/moodledata
-   This location is outside the web root and more secure.
-   
-   Both directories have been created with appropriate permissions.
-
-5. SITE CONFIGURATION
----------------------------------------------------------------------
-   Enter the following information:
-   - Site name:      [Your preferred site name]
-   - Admin username: [Choose an admin username]
-   - Admin password: [Create a strong password]
-   - Admin email:    [Your email address]
-   
-   Important: Record these credentials in a secure location!
-
-6. INSTALLATION COMPLETION
----------------------------------------------------------------------
-   The installation wizard will create necessary database tables and
-   configure your site. This may take several minutes.
-
-7. POST-INSTALLATION STEPS
----------------------------------------------------------------------
-   After installation is complete:
-   - Review and update site settings
-   - Configure email notifications
-   - Create courses and user accounts
-   - Install additional plugins as needed
-
-8. SECURITY RECOMMENDATIONS
----------------------------------------------------------------------
-   - Change the data directory permissions to 770 after installation:
-     sudo chmod 770 /var/moodledata
-   - Set up HTTPS with SSL/TLS certificates
-   - Configure regular database backups
-   - Keep Moodle and all components updated
-
-For additional help, visit: https://docs.moodle.org/
-
-These instructions are saved at: /home/azureadmin/moodle_setup_instructions.txt
-=====================================================================
-EOL
-
-# Make sure the instructions file is readable
-chown azureadmin:azureadmin /home/azureadmin/moodle_setup_instructions.txt
-chmod 644 /home/azureadmin/moodle_setup_instructions.txt
-
-echo "Moodle setup complete. Please follow the instructions in /home/azureadmin/moodle_setup_instructions.txt to finish the installation."
+echo "Moodle setup complete."
