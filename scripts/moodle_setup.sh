@@ -100,15 +100,10 @@ rm -f /var/www/html/moodle/config.php
 echo "Setting directory permissions..."
 chmod 777 /var/www/html
 
-# Create both possible moodledata directories with proper permissions
-# Option 1: Standard location within web directory
+# Create moodledata directorie with proper permissions
 echo "Creating moodledata directories..."
 mkdir -p /var/www/html/moodledata
 chmod 777 /var/www/html/moodledata
-
-# Option 2: More secure location outside web directory
-mkdir -p /var/moodledata
-chmod 777 /var/moodledata
 
 # Set proper ownership for all directories
 echo "Setting directory ownership..."
