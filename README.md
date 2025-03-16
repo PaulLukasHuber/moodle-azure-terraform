@@ -9,7 +9,7 @@
 [![MIT License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](https://github.com/yourusername/moodle-azure-terraform/pulls)
 
-[🌍 English](#overview) | [🇩🇪 Deutsch](#moodle-lms-bereitstellung-auf-azure-mit-terraform)
+[🌍 English](#-overview) | [🇩🇪 Deutsch](#-moodle-lms-bereitstellung-auf-azure-mit-terraform)
 
 </div>
 
