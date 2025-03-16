@@ -1,45 +1,59 @@
-# Moodle LMS Deployment on Azure using Terraform
+# 🚀 Moodle LMS Deployment on Azure using Terraform
+
+<div align="center">
 
 ![Terraform](https://img.shields.io/badge/terraform-%235835CC.svg?style=for-the-badge&logo=terraform&logoColor=white)
 ![Azure](https://img.shields.io/badge/azure-%230072C6.svg?style=for-the-badge&logo=microsoftazure&logoColor=white)
 ![Moodle](https://img.shields.io/badge/moodle-%23F98012.svg?style=for-the-badge&logo=moodle&logoColor=white)
 
-## English | [Deutsch](#moodle-lms-bereitstellung-auf-azure-mit-terraform)
+[![MIT License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
+[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](https://github.com/paullukashuber/moodle-azure-terraform/pulls)
 
-## Overview
+[🌍 English](#overview) | [🇩🇪 Deutsch](#moodle-lms-bereitstellung-auf-azure-mit-terraform)
+
+</div>
+
+## 📋 Overview
 
 This repository contains Infrastructure as Code (IaC) using Terraform to deploy a complete Moodle Learning Management System (LMS) environment on Microsoft Azure. This project was developed as part of the Cloud Computing module at the University of Applied Sciences Weserbergland (Hochschule Weserbergland).
 
-## Project Description
+## ✨ Project Description
 
-The goal of this project is to demonstrate how to use modern Infrastructure as Code principles to deploy and configure a fully functional Moodle instance in the cloud. The deployment includes:
+> **Deploy Moodle LMS in minutes with zero manual configuration**
 
-- Networking infrastructure (VNet, subnets, NSGs)
-- Compute resources (Virtual Machine)
-- Database (PostgreSQL Flexible Server)
-- Storage accounts for Moodle data
-- Security configurations and monitoring
+This project showcases modern **Infrastructure as Code** principles to deploy a production-ready Moodle instance in the cloud. We embrace the [12-Factor App](https://12factor.net/) methodology for cloud-native applications and apply microservices architecture principles for optimal scalability and maintainability.
 
-The entire infrastructure is defined as code using Terraform, enabling consistent, reproducible deployments and simplifying the management of the infrastructure.
-
-## Architecture
+## 🏗️ Architecture
 
 The deployment follows a multi-tier architecture:
 
-- **Web Tier**: Ubuntu VM running Apache, PHP, and Moodle
-- **Database Tier**: Azure PostgreSQL Flexible Server
-- **Storage Tier**: Azure Storage accounts for Moodle files
+- 🖥️ **Web Tier**: Ubuntu VM running Apache, PHP, and Moodle application
+- 🗄️ **Database Tier**: Azure PostgreSQL Flexible Server 
+- 📦 **Storage Tier**: Azure Storage accounts for Moodle files and data
 
-Network security groups and subnet separation provide security between tiers.
+Network security groups and subnet separation provide security between tiers, following the principle of least privilege.
 
-## Prerequisites
+## 🔧 Prerequisites
 
 - Azure subscription
 - Terraform (>= 1.0)
 - Azure CLI
 - Git
 
-## Getting Started
+## 📦 Module Structure
+
+The project is organized into specialized modules for better maintainability and separation of concerns:
+
+```
+modules/
+├── networking/  # Virtual network, subnets, NSGs
+├── compute/     # VM and Moodle installation
+├── database/    # PostgreSQL Flexible Server
+├── storage/     # Storage accounts for Moodle data
+└── security/    # Monitoring and security
+```
+
+## 🚀 Getting Started
 
 ### 1. Clone the Repository
 
@@ -53,106 +67,137 @@ cd moodle-azure-terraform
 Create a `terraform.tfvars` file with your specific configuration:
 
 ```hcl
-# Refer to sample-terraform.tfvars in the repository
 resource_group_name    = "your-resource-group"
 location               = "westeurope"
-storage_account_name   = "yourmoodlestorage"
+storage_account_name   = "yourmoodlestorage"  # Must be globally unique
 db_admin_password      = "YourSecurePassword123!"
 vm_admin_password      = "YourSecurePassword123!"
 moodle_admin_password  = "YourSecurePassword123!"
 ```
 
-### 3. Initialize Terraform
+### 3. Initialize and Deploy
 
 ```bash
+# Initialize Terraform
 terraform init
-```
 
-### 4. Deploy the Infrastructure
-
-```bash
+# Preview the changes
 terraform plan -out=moodle.tfplan
+
+# Apply the changes
 terraform apply "moodle.tfplan"
 ```
 
-Alternatively, use the provided deployment script:
+Or use our convenient deployment script:
 
 ```bash
-chmod +x deploy.sh
-./deploy.sh
+chmod +x /scripts/deploy.sh
+./scripts/deploy.sh
 ```
 
-### 5. Access Moodle
+### 4. Access Moodle
 
-After deployment, Terraform will output the URL to access your Moodle installation:
+After deployment, access your Moodle installation at:
 
 ```
-Outputs:
-
-moodle_url = "http://your-vm-ip-address"
-moodle_admin_url = "http://your-vm-ip-address/admin"
+http://<vm-ip-address>           # Main Moodle site
+http://<vm-ip-address>/admin     # Admin interface
 ```
 
-Follow the on-screen instructions to complete the Moodle setup.
+> ⏱️ Note: It may take a few minutes for Moodle to fully initialize after deployment.
 
-## Module Structure
+## 🔒 Security Considerations
 
-- `modules/compute`: VM and Moodle installation
-- `modules/database`: PostgreSQL server and database
-- `modules/networking`: VNet, subnets, and NSGs
-- `modules/security`: Monitoring and security configurations
-- `modules/storage`: Storage accounts for Moodle data
+This deployment includes several security measures:
 
-## Cleanup
+- Network security groups with least-privilege access rules
+- Subnet isolation for different application tiers
+- TLS 1.2 enforcement for storage accounts
+- VM monitoring and automated alerts
+
+For production environments, consider these additional enhancements:
+- Enable HTTPS with valid SSL certificates
+- Implement Azure Key Vault for secret management
+- Configure Azure Backup for disaster recovery
+- Add Web Application Firewall (WAF) protection
+
+## ⚙️ Customization Options
+
+Customize your deployment through variables in `terraform.tfvars`:
+
+| Component | Customizable Aspects |
+|-----------|----------------------|
+| VM        | Size, OS, disk space |
+| Database  | Tier, performance, backup retention |
+| Storage   | Capacity, redundancy level |
+| Network   | CIDR ranges, NSG rules |
+| Moodle    | Version, site settings |
+
+## 🧹 Cleanup
 
 To delete all resources when they're no longer needed:
 
 ```bash
-terraform destroy
+terraform destroy -auto-approve
 ```
 
-## License
+## 📄 License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
 ---
 
-# Moodle LMS Bereitstellung auf Azure mit Terraform
+# 🚀 Moodle LMS Bereitstellung auf Azure mit Terraform
 
-## Überblick
+<div align="center">
+
+![Terraform](https://img.shields.io/badge/terraform-%235835CC.svg?style=for-the-badge&logo=terraform&logoColor=white)
+![Azure](https://img.shields.io/badge/azure-%230072C6.svg?style=for-the-badge&logo=microsoftazure&logoColor=white)
+![Moodle](https://img.shields.io/badge/moodle-%23F98012.svg?style=for-the-badge&logo=moodle&logoColor=white)
+
+</div>
+
+## 📋 Überblick
 
 Dieses Repository enthält Infrastructure as Code (IaC) mit Terraform, um eine vollständige Moodle Learning Management System (LMS)-Umgebung auf Microsoft Azure bereitzustellen. Dieses Projekt wurde im Rahmen des Moduls Cloud Computing an der Hochschule Weserbergland entwickelt.
 
-## Projektbeschreibung
+## ✨ Projektbeschreibung
 
-Das Ziel dieses Projekts ist es, zu demonstrieren, wie moderne Infrastructure-as-Code-Prinzipien genutzt werden können, um eine voll funktionsfähige Moodle-Instanz in der Cloud zu implementieren und zu konfigurieren. Die Bereitstellung umfasst:
+> **Stellen Sie Moodle LMS in Minuten ohne manuelle Konfiguration bereit**
 
-- Netzwerkinfrastruktur (VNet, Subnetze, NSGs)
-- Rechenressourcen (Virtuelle Maschine)
-- Datenbank (PostgreSQL Flexible Server)
-- Speicherkonten für Moodle-Daten
-- Sicherheitskonfigurationen und Monitoring
+Dieses Projekt demonstriert moderne **Infrastructure-as-Code**-Prinzipien zur Bereitstellung einer produktionsreifen Moodle-Instanz in der Cloud. Wir nutzen die [12-Factor-App](https://12factor.net/)-Methodik für Cloud-native Anwendungen und wenden Prinzipien der Microservices-Architektur für optimale Skalierbarkeit und Wartbarkeit an.
 
-Die gesamte Infrastruktur ist als Code mit Terraform definiert, was konsistente, reproduzierbare Bereitstellungen ermöglicht und die Verwaltung der Infrastruktur vereinfacht.
-
-## Architektur
+## 🏗️ Architektur
 
 Die Bereitstellung folgt einer mehrstufigen Architektur:
 
-- **Web-Ebene**: Ubuntu VM mit Apache, PHP und Moodle
-- **Datenbank-Ebene**: Azure PostgreSQL Flexible Server
-- **Speicher-Ebene**: Azure Storage-Konten für Moodle-Dateien
+- 🖥️ **Web-Ebene**: Ubuntu VM mit Apache, PHP und Moodle-Anwendung
+- 🗄️ **Datenbank-Ebene**: Azure PostgreSQL Flexible Server
+- 📦 **Speicher-Ebene**: Azure Storage-Konten für Moodle-Dateien und -Daten
 
-Netzwerksicherheitsgruppen und Subnetz-Trennung bieten Sicherheit zwischen den Ebenen.
+Netzwerksicherheitsgruppen und Subnetz-Trennung bieten Sicherheit zwischen den Ebenen und folgen dem Prinzip der geringsten Berechtigung.
 
-## Voraussetzungen
+## 🔧 Voraussetzungen
 
 - Azure-Abonnement
 - Terraform (>= 1.0)
 - Azure CLI
 - Git
 
-## Erste Schritte
+## 📦 Modulstruktur
+
+Das Projekt ist in spezialisierte Module für bessere Wartbarkeit und Trennung der Zuständigkeiten organisiert:
+
+```
+modules/
+├── networking/  # Virtuelles Netzwerk, Subnetze, NSGs
+├── compute/     # VM und Moodle-Installation
+├── database/    # PostgreSQL Flexible Server
+├── storage/     # Speicherkonten für Moodle-Daten
+└── security/    # Überwachung und Sicherheit
+```
+
+## 🚀 Erste Schritte
 
 ### 1. Repository klonen
 
@@ -166,64 +211,80 @@ cd moodle-azure-terraform
 Erstellen Sie eine `terraform.tfvars`-Datei mit Ihrer spezifischen Konfiguration:
 
 ```hcl
-# Siehe sample-terraform.tfvars im Repository
 resource_group_name    = "ihre-ressourcengruppe"
 location               = "westeurope"
-storage_account_name   = "ihrmoodlespeicher"
+storage_account_name   = "ihrmoodlespeicher"  # Muss global eindeutig sein
 db_admin_password      = "IhrSicheresPasswort123!"
 vm_admin_password      = "IhrSicheresPasswort123!"
 moodle_admin_password  = "IhrSicheresPasswort123!"
 ```
 
-### 3. Terraform initialisieren
+### 3. Initialisieren und Bereitstellen
 
 ```bash
+# Terraform initialisieren
 terraform init
-```
 
-### 4. Infrastruktur bereitstellen
-
-```bash
+# Änderungen vorab anzeigen
 terraform plan -out=moodle.tfplan
+
+# Änderungen anwenden
 terraform apply "moodle.tfplan"
 ```
 
-Alternativ können Sie das bereitgestellte Deployment-Skript verwenden:
+Oder verwenden Sie unser praktisches Bereitstellungsskript:
 
 ```bash
-chmod +x deploy.sh
-./deploy.sh
+chmod +x scripts/deploy.sh
+./scripts/deploy.sh
 ```
 
-### 5. Moodle zugreifen
+### 4. Zugriff auf Moodle
 
-Nach der Bereitstellung gibt Terraform die URL aus, um auf Ihre Moodle-Installation zuzugreifen:
+Nach der Bereitstellung können Sie auf Ihre Moodle-Installation zugreifen unter:
 
 ```
-Outputs:
-
-moodle_url = "http://ihre-vm-ip-adresse"
-moodle_admin_url = "http://ihre-vm-ip-adresse/admin"
+http://<vm-ip-adresse>           # Moodle-Hauptseite
+http://<vm-ip-adresse>/admin     # Admin-Oberfläche
 ```
 
-Folgen Sie den Anweisungen auf dem Bildschirm, um die Moodle-Einrichtung abzuschließen.
+> ⏱️ Hinweis: Es kann einige Minuten dauern, bis Moodle nach der Bereitstellung vollständig initialisiert ist.
 
-## Modulstruktur
+## 🔒 Sicherheitsüberlegungen
 
-- `modules/compute`: VM und Moodle-Installation
-- `modules/database`: PostgreSQL-Server und Datenbank
-- `modules/networking`: VNet, Subnetze und NSGs
-- `modules/security`: Überwachung und Sicherheitskonfigurationen
-- `modules/storage`: Speicherkonten für Moodle-Daten
+Diese Bereitstellung umfasst mehrere Sicherheitsmaßnahmen:
 
-## Bereinigung
+- Netzwerksicherheitsgruppen mit Zugriffsregeln nach dem Prinzip der geringsten Berechtigung
+- Subnetz-Isolation für verschiedene Anwendungsebenen
+- TLS 1.2-Durchsetzung für Speicherkonten
+- VM-Überwachung und automatisierte Warnungen
+
+Für Produktionsumgebungen sollten Sie diese zusätzlichen Verbesserungen in Betracht ziehen:
+- HTTPS mit gültigen SSL-Zertifikaten aktivieren
+- Azure Key Vault für die Verwaltung von Geheimnissen implementieren
+- Azure Backup für die Notfallwiederherstellung konfigurieren
+- Web Application Firewall (WAF)-Schutz hinzufügen
+
+## ⚙️ Anpassungsoptionen
+
+Passen Sie Ihre Bereitstellung über Variablen in `terraform.tfvars` an:
+
+| Komponente | Anpassbare Aspekte |
+|------------|-------------------|
+| VM         | Größe, Betriebssystem, Speicherplatz |
+| Datenbank  | Tier, Leistung, Backup-Aufbewahrung |
+| Speicher   | Kapazität, Redundanzstufe |
+| Netzwerk   | CIDR-Bereiche, NSG-Regeln |
+| Moodle     | Version, Site-Einstellungen |
+
+## 🧹 Bereinigung
 
 Um alle Ressourcen zu löschen, wenn sie nicht mehr benötigt werden:
 
 ```bash
-terraform destroy
+terraform destroy -auto-approve
 ```
 
-## Lizenz
+## 📄 Lizenz
 
 Dieses Projekt ist unter der MIT-Lizenz lizenziert - siehe die [LICENSE](LICENSE)-Datei für Details.
