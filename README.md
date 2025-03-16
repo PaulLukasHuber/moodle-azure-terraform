@@ -7,7 +7,7 @@
 ![Moodle](https://img.shields.io/badge/moodle-%23F98012.svg?style=for-the-badge&logo=moodle&logoColor=white)
 
 [![MIT License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
-[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](https://github.com/paullukashuber/moodle-azure-terraform/pulls)
+[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](https://github.com/yourusername/moodle-azure-terraform/pulls)
 
 [🌍 English](#overview) | [🇩🇪 Deutsch](#moodle-lms-bereitstellung-auf-azure-mit-terraform)
 
@@ -19,9 +19,11 @@ This repository contains Infrastructure as Code (IaC) using Terraform to deploy 
 
 ## ✨ Project Description
 
-> **Deploy Moodle LMS in minutes with zero manual configuration**
+> **Automate Moodle infrastructure deployment on Azure**
 
-This project showcases modern **Infrastructure as Code** principles to deploy a production-ready Moodle instance in the cloud. We embrace the [12-Factor App](https://12factor.net/) methodology for cloud-native applications and apply microservices architecture principles for optimal scalability and maintainability.
+This project showcases modern **Infrastructure as Code** principles to deploy the infrastructure for a Moodle instance in the cloud. We embrace the [12-Factor App](https://12factor.net/) methodology for cloud-native applications and apply microservices architecture principles for optimal scalability and maintainability.
+
+The Terraform scripts **automate the infrastructure deployment** including the VM, database, networking, and Moodle software installation. **After deployment, you will need to complete the Moodle configuration manually** through the web interface to set up your specific requirements.
 
 ## 🏗️ Architecture
 
@@ -91,20 +93,35 @@ terraform apply "moodle.tfplan"
 Or use our convenient deployment script:
 
 ```bash
-chmod +x /scripts/deploy.sh
+chmod +x scripts/deploy.sh
 ./scripts/deploy.sh
 ```
 
-### 4. Access Moodle
+### 4. Access and Configure Moodle
 
-After deployment, access your Moodle installation at:
+After the infrastructure deployment completes, you need to manually configure Moodle:
 
-```
-http://<vm-ip-address>           # Main Moodle site
-http://<vm-ip-address>/admin     # Admin interface
-```
+1. Access the Moodle installation page at `http://<vm-ip-address>`
+2. Follow the on-screen setup wizard to:
+   - Connect to your database (use the credentials from your `terraform.tfvars`)
+   - Create the admin account
+   - Configure site settings
+   - Set up courses and users
 
-> ⏱️ Note: It may take a few minutes for Moodle to fully initialize after deployment.
+> ⏱️ Note: It may take 5-10 minutes for the VM to complete initialization before Moodle is accessible.
+
+## 🔄 Deployment Process
+
+What gets automated:
+- ✅ Infrastructure provisioning (VM, database, networking)
+- ✅ Software installation (Apache, PHP, Moodle files)
+- ✅ Base system configuration
+
+What requires manual setup:
+- ❗ Initial Moodle database configuration
+- ❗ Admin account creation
+- ❗ Site settings and theme configuration
+- ❗ Course setup and user management
 
 ## 🔒 Security Considerations
 
@@ -163,9 +180,11 @@ Dieses Repository enthält Infrastructure as Code (IaC) mit Terraform, um eine v
 
 ## ✨ Projektbeschreibung
 
-> **Stellen Sie Moodle LMS in Minuten ohne manuelle Konfiguration bereit**
+> **Automatisieren Sie die Moodle-Infrastrukturbereitstellung auf Azure**
 
-Dieses Projekt demonstriert moderne **Infrastructure-as-Code**-Prinzipien zur Bereitstellung einer produktionsreifen Moodle-Instanz in der Cloud. Wir nutzen die [12-Factor-App](https://12factor.net/)-Methodik für Cloud-native Anwendungen und wenden Prinzipien der Microservices-Architektur für optimale Skalierbarkeit und Wartbarkeit an.
+Dieses Projekt demonstriert moderne **Infrastructure-as-Code**-Prinzipien zur Bereitstellung der Infrastruktur für eine Moodle-Instanz in der Cloud. Wir nutzen die [12-Factor-App](https://12factor.net/)-Methodik für Cloud-native Anwendungen und wenden Prinzipien der Microservices-Architektur für optimale Skalierbarkeit und Wartbarkeit an.
+
+Die Terraform-Skripte **automatisieren die Infrastrukturbereitstellung** einschließlich der VM, Datenbank, Netzwerke und Moodle-Softwareinstallation. **Nach der Bereitstellung müssen Sie die Moodle-Konfiguration manuell** über die Weboberfläche abschließen, um Ihre spezifischen Anforderungen einzurichten.
 
 ## 🏗️ Architektur
 
@@ -239,16 +258,31 @@ chmod +x scripts/deploy.sh
 ./scripts/deploy.sh
 ```
 
-### 4. Zugriff auf Moodle
+### 4. Zugriff und Konfiguration von Moodle
 
-Nach der Bereitstellung können Sie auf Ihre Moodle-Installation zugreifen unter:
+Nach Abschluss der Infrastrukturbereitstellung müssen Sie Moodle manuell konfigurieren:
 
-```
-http://<vm-ip-adresse>           # Moodle-Hauptseite
-http://<vm-ip-adresse>/admin     # Admin-Oberfläche
-```
+1. Greifen Sie auf die Moodle-Installationsseite unter `http://<vm-ip-adresse>` zu
+2. Folgen Sie dem Einrichtungsassistenten auf dem Bildschirm, um:
+   - Die Verbindung zur Datenbank herzustellen (verwenden Sie die Anmeldeinformationen aus Ihrer `terraform.tfvars`)
+   - Das Administratorkonto zu erstellen
+   - Die Site-Einstellungen zu konfigurieren
+   - Kurse und Benutzer einzurichten
 
-> ⏱️ Hinweis: Es kann einige Minuten dauern, bis Moodle nach der Bereitstellung vollständig initialisiert ist.
+> ⏱️ Hinweis: Es kann 5-10 Minuten dauern, bis die VM die Initialisierung abgeschlossen hat und Moodle zugänglich ist.
+
+## 🔄 Bereitstellungsprozess
+
+Was automatisiert wird:
+- ✅ Infrastrukturbereitstellung (VM, Datenbank, Netzwerke)
+- ✅ Softwareinstallation (Apache, PHP, Moodle-Dateien)
+- ✅ Basis-Systemkonfiguration
+
+Was manuelle Einrichtung erfordert:
+- ❗ Initiale Moodle-Datenbankkonfiguration
+- ❗ Erstellung des Administratorkontos
+- ❗ Site-Einstellungen und Theme-Konfiguration
+- ❗ Kurseinrichtung und Benutzerverwaltung
 
 ## 🔒 Sicherheitsüberlegungen
 
